@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import cz.cesnet.shongo.api.rpc.Service;
 import cz.cesnet.shongo.controller.api.UserSettings;
 import cz.cesnet.shongo.controller.api.jade.ServiceImpl;
+import cz.cesnet.shongo.controller.rest.FrontendRESTServer;
 import cz.cesnet.shongo.controller.api.rpc.*;
 import cz.cesnet.shongo.controller.authorization.Authorization;
 import cz.cesnet.shongo.controller.authorization.ServerAuthorization;
@@ -172,7 +173,7 @@ public class Controller
      */
     protected Controller(org.apache.commons.configuration.AbstractConfiguration configuration)
     {
-        setConfiguration(configuration);
+            setConfiguration(configuration);
     }
 
     /**
@@ -538,6 +539,7 @@ public class Controller
         startRpc();
         startJade();
         startInterDomainRESTApi();
+        startFrontendRESTApi();
         startWorkerThread();
         startComponents();
     }
@@ -640,7 +642,7 @@ public class Controller
 
             // Create web app
             WebAppContext webAppContext = new WebAppContext();
-            String servletPath = "/*";
+            String servletPath = "/";
             webAppContext.addServlet(new ServletHolder("interDomain", DispatcherServlet.class), servletPath);
             webAppContext.setParentLoaderPriority(true);
 
@@ -710,6 +712,18 @@ public class Controller
             return restServer;
         }
         return null;
+    }
+
+    /**
+     * Creates a Jetty REST api server for shongo frontend.
+     */
+    public void startFrontendRESTApi() {
+        logger.info("Starting frontend REST api server.");
+
+        FrontendRESTServer server = new FrontendRESTServer();
+        server.start();
+
+        logger.info("Frontend REST api server successfully started.");
     }
 
     /**
