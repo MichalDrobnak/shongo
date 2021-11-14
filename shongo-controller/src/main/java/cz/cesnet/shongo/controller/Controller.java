@@ -4,7 +4,7 @@ import com.google.common.base.Strings;
 import cz.cesnet.shongo.api.rpc.Service;
 import cz.cesnet.shongo.controller.api.UserSettings;
 import cz.cesnet.shongo.controller.api.jade.ServiceImpl;
-import cz.cesnet.shongo.controller.rest.FrontendRESTServer;
+import cz.cesnet.shongo.controller.rest.RESTApiServer;
 import cz.cesnet.shongo.controller.api.rpc.*;
 import cz.cesnet.shongo.controller.authorization.Authorization;
 import cz.cesnet.shongo.controller.authorization.ServerAuthorization;
@@ -538,8 +538,7 @@ public class Controller
         start();
         startRpc();
         startJade();
-        startInterDomainRESTApi();
-        startFrontendRESTApi();
+        startRESTApi();
         startWorkerThread();
         startComponents();
     }
@@ -631,99 +630,21 @@ public class Controller
         return jadeContainer;
     }
 
-    public Server startInterDomainRESTApi() throws NoSuchAlgorithmException, CertificateException, InvalidAlgorithmParameterException, IOException, KeyStoreException {
-        if (configuration.isInterDomainConfigured()) {
-            logger.info("Starting Inter Domain REST server on {}:{}...",
-                    configuration.getInterDomainHost(), configuration.getInterDomainPort());
-
-            restServer = new Server();
-            // Configure SSL
-            ConfiguredSSLContext.getInstance().loadConfiguration(configuration);
-
-            // Create web app
-            WebAppContext webAppContext = new WebAppContext();
-            String servletPath = "/";
-            webAppContext.addServlet(new ServletHolder("interDomain", DispatcherServlet.class), servletPath);
-            webAppContext.setParentLoaderPriority(true);
-
-            URL resourceBaseUrl = Controller.class.getClassLoader().getResource("WEB-INF");
-            if (resourceBaseUrl == null) {
-                throw new RuntimeException("WEB-INF is not in classpath.");
-            }
-            String resourceBase = resourceBaseUrl.toExternalForm().replace("/WEB-INF", "/");
-            webAppContext.setResourceBase(resourceBase);
-
-            final HttpConfiguration http_config = new HttpConfiguration();
-
-            // Configure HTTPS connector
-            http_config.setSecureScheme(HttpScheme.HTTPS.asString());
-            http_config.setSecurePort(configuration.getInterDomainPort());
-            final HttpConfiguration https_config = new HttpConfiguration(http_config);
-            https_config.addCustomizer(new SecureRequestCustomizer());
-
-
-            final SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
-            KeyStore trustStore  = KeyStore.getInstance(KeyStore.getDefaultType());
-            trustStore.load(null);
-            // Load certificates of foreign domain's CAs
-            for (String certificatePath : configuration.getForeignDomainsCaCertFiles()) {
-                trustStore.setCertificateEntry(certificatePath.substring(0, certificatePath.lastIndexOf('.')),
-                        SSLCommunication.readPEMCert(certificatePath));
-            }
-            sslContextFactory.setKeyStorePath(configuration.getInterDomainSslKeyStore());
-            sslContextFactory.setKeyStoreType(configuration.getInterDomainSslKeyStoreType());
-            sslContextFactory.setKeyStorePassword(configuration.getInterDomainSslKeyStorePassword());
-            sslContextFactory.setTrustStore(trustStore);
-            if (configuration.requiresClientPKIAuth()) {
-                // Enable forced client auth
-                sslContextFactory.setNeedClientAuth(true);
-                // Enable SSL client filter by certificates
-                EnumSet<DispatcherType> filterTypes = EnumSet.of(DispatcherType.REQUEST);
-                webAppContext.addFilter(SSLClientCertFilter.class, servletPath, filterTypes);
-            }
-            else {
-                EnumSet<DispatcherType> filterTypes = EnumSet.of(DispatcherType.REQUEST);
-                webAppContext.addFilter(BasicAuthFilter.class, servletPath, filterTypes);
-            }
-
-            final ServerConnector httpsConnector = new ServerConnector(restServer,
-                    new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                    new HttpConnectionFactory(https_config));
-            String host = configuration.getInterDomainHost();
-            if (!Strings.isNullOrEmpty(host)) {
-                httpsConnector.setHost(host);
-            }
-            httpsConnector.setPort(configuration.getInterDomainPort());
-            httpsConnector.setIdleTimeout(configuration.getInterDomainCommandTimeout());
-
-
-
-            restServer.setConnectors(new Connector[]{httpsConnector});
-
-            restServer.setHandler(webAppContext);
-            try {
-                restServer.start();
-                logger.info("Inter Domain REST server successfully started.");
-            } catch (Exception exception) {
-                throw new RuntimeException(exception);
-            }
-
-            this.interDomainInitialized = true;
-            return restServer;
-        }
-        return null;
-    }
-
     /**
-     * Creates a Jetty REST api server for shongo frontend.
+     * Creates a Jetty REST api server for frontend and inter-domain extension.
      */
-    public void startFrontendRESTApi() {
-        logger.info("Starting frontend REST api server.");
+    public Server startRESTApi() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException {
+        logger.info("Starting REST api server on {}:{}...",
+                configuration.getRESTApiHost(), configuration.getRESTApiPort());
 
-        FrontendRESTServer server = new FrontendRESTServer();
-        server.start();
+        restServer = RESTApiServer.start(configuration);
 
-        logger.info("Frontend REST api server successfully started.");
+        if (configuration.isInterDomainConfigured()) {
+            interDomainInitialized = true;
+        }
+        logger.info("REST api server successfully started.");
+
+        return restServer;
     }
 
     /**
@@ -817,7 +738,7 @@ public class Controller
         }
 
         if (restServer != null) {
-            logger.info("Stopping Controller Inter Domain REST server...");
+            logger.info("Stopping Controller REST api server...");
             try {
                 restServer.stop();
             } catch (Exception exception) {

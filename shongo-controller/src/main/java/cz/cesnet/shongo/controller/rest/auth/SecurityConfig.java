@@ -2,6 +2,7 @@ package cz.cesnet.shongo.controller.rest.auth;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -14,8 +15,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private static final String ISSUER_URI = "https://login.cesnet.cz/oidc/";
 
     @Override
+    public void configure(WebSecurity web) {
+        web.ignoring().antMatchers("/domain/**");
+    }
+
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
+            .antMatchers("/domain/**").permitAll()
             .anyRequest()
             .authenticated()
             .and()

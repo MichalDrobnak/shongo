@@ -59,16 +59,17 @@ public class ControllerConfiguration extends CombinedConfiguration
     public static final String JADE_AGENT_NAME = "jade.agent-name";
     public static final String JADE_PLATFORM_ID = "jade.platform-id";
 
+    public static final String REST_API = "rest-api";
+    public static final String REST_API_HOST = "rest-api.host";
+    public static final String REST_API_PORT = "rest-api.port";
+    public static final String REST_API_SSL_KEY_STORE = REST_API + ".ssl-key-store";
+    public static final String REST_API_SSL_KEY_STORE_TYPE = REST_API + ".ssl-key-store-type";
+    public static final String REST_API_SSL_KEY_STORE_PASSWORD = REST_API + ".ssl-key-store-password";
     /**
      * Interdomains configuration
      */
     public static final String INTERDOMAIN = "domain.inter-domain-connection";
-    public static final String INTERDOMAIN_HOST = INTERDOMAIN + ".host";
-    public static final String INTERDOMAIN_PORT = INTERDOMAIN + ".port";
     public static final String INTERDOMAIN_PKI_CLIENT_AUTH = INTERDOMAIN + ".pki-client-auth";
-    public static final String INTERDOMAIN_SSL_KEY_STORE = INTERDOMAIN + ".ssl-key-store";
-    public static final String INTERDOMAIN_SSL_KEY_STORE_TYPE = INTERDOMAIN + ".ssl-key-store-type";
-    public static final String INTERDOMAIN_SSL_KEY_STORE_PASSWORD = INTERDOMAIN + ".ssl-key-store-password";
     public static final String INTERDOMAIN_TRUSTED_CA_CERT_FILES = INTERDOMAIN + ".ssl-trust-store.ca-certificate";
     public static final String INTERDOMAIN_COMMAND_TIMEOUT = INTERDOMAIN + ".command-timeout";
     public static final String INTERDOMAIN_CACHE_REFRESH_RATE = INTERDOMAIN + ".cache-refresh-rate";
@@ -481,25 +482,13 @@ public class ControllerConfiguration extends CombinedConfiguration
 
     public boolean isInterDomainConfigured()
     {
-        if (getInterDomainPort() != null) {
-            if (requiresClientPKIAuth() && hasInterDomainPKI()) {
-                return true;
-            }
-            if (hasInterDomainBasicAuth()) {
-                return true;
-            }
+        if (requiresClientPKIAuth() && hasRESTApiPKI()) {
+            return true;
+        }
+        if (hasInterDomainBasicAuth()) {
+            return true;
         }
         return false;
-    }
-
-    public boolean hasInterDomainPKI()
-    {
-        if (Strings.isNullOrEmpty(getInterDomainSslKeyStore())
-                || Strings.isNullOrEmpty(getInterDomainSslKeyStoreType())
-                || Strings.isNullOrEmpty(getInterDomainSslKeyStorePassword())) {
-            return false;
-        }
-        return true;
     }
 
     public boolean hasInterDomainBasicAuth()
@@ -510,14 +499,44 @@ public class ControllerConfiguration extends CombinedConfiguration
         return true;
     }
 
-    public String getInterDomainHost()
+    // REST Api configuration
+    public String getRESTApiHost()
     {
-        return getString(ControllerConfiguration.INTERDOMAIN_HOST);
+        String host = getString(ControllerConfiguration.REST_API_HOST);
+        return host != null ? host : "localhost";
     }
 
-    public Integer getInterDomainPort()
+    public Integer getRESTApiPort()
     {
-        return getInteger(ControllerConfiguration.INTERDOMAIN_PORT, null);
+        Integer port = getInteger(ControllerConfiguration.REST_API_PORT, null);
+        return port != null ? port : 9999;
+    }
+
+    public String getRESTApiSslKeyStore()
+    {
+        String sslKeyStore = getString(ControllerConfiguration.REST_API_SSL_KEY_STORE);
+        if (sslKeyStore == null || sslKeyStore.trim().isEmpty()) {
+            return null;
+        }
+        return sslKeyStore;
+    }
+
+    public String getRESTApiSslKeyStoreType() {
+        return getString(ControllerConfiguration.REST_API_SSL_KEY_STORE_TYPE);
+    }
+
+    public String getRESTApiSslKeyStorePassword() {
+        return getString(ControllerConfiguration.REST_API_SSL_KEY_STORE_PASSWORD);
+    }
+
+    public boolean hasRESTApiPKI()
+    {
+        if (Strings.isNullOrEmpty(getRESTApiSslKeyStore())
+                || Strings.isNullOrEmpty(getRESTApiSslKeyStoreType())
+                || Strings.isNullOrEmpty(getRESTApiSslKeyStorePassword())) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -529,15 +548,6 @@ public class ControllerConfiguration extends CombinedConfiguration
         return getBoolean(ControllerConfiguration.INTERDOMAIN_PKI_CLIENT_AUTH, false);
     }
 
-    public String getInterDomainSslKeyStore()
-    {
-        String sslKeyStore = getString(ControllerConfiguration.INTERDOMAIN_SSL_KEY_STORE);
-        if (sslKeyStore == null || sslKeyStore.trim().isEmpty()) {
-            return null;
-        }
-        return sslKeyStore;
-    }
-
     public String getInterDomainBasicAuthPasswordHash()
     {
         String password = getString(ControllerConfiguration.INTERDOMAIN_BASIC_AUTH_PASSWORD);
@@ -545,14 +555,6 @@ public class ControllerConfiguration extends CombinedConfiguration
             return null;
         }
         return SSLCommunication.hashPassword(password.getBytes());
-    }
-
-    public String getInterDomainSslKeyStoreType() {
-        return getString(ControllerConfiguration.INTERDOMAIN_SSL_KEY_STORE_TYPE);
-    }
-
-    public String getInterDomainSslKeyStorePassword() {
-        return getString(ControllerConfiguration.INTERDOMAIN_SSL_KEY_STORE_PASSWORD);
     }
 
     public List<String> getForeignDomainsCaCertFiles() {
