@@ -3,6 +3,7 @@
 *.iml
 .jade
 log/
+lib/
 target/
 *.fsps
 *.class

@@ -47,7 +47,7 @@ public class ServerAuthorization extends Authorization
     /**
      * Authentication service path in auth-server.
      */
-    private static final String AUTHENTICATION_SERVICE_PATH = "/oidc-authn/oic";
+    private static final String AUTHENTICATION_SERVICE_PATH = "/oidc";
 
     /**
      * User web service path in auth-server.
@@ -210,10 +210,11 @@ public class ServerAuthorization extends Authorization
         String errorReason = null;
         try {
             URIBuilder uriBuilder = new URIBuilder(getAuthenticationUrl() + "/userinfo");
-            uriBuilder.setParameter("schema", "openid");
             HttpGet httpGet = new HttpGet(uriBuilder.build());
             httpGet.setHeader("Authorization", "Bearer " + accessToken);
+            logger.info("User info endpoint: {}", httpGet);
             HttpResponse response = httpClient.execute(httpGet);
+            logger.info("Response: {}", response.getEntity());
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 JsonNode jsonNode = readJson(response.getEntity());
                 if (jsonNode == null) {
@@ -993,10 +994,10 @@ public class ServerAuthorization extends Authorization
     private static UserData createUserDataFromWebServiceData(JsonNode data)
     {
         // Required fields
-        if (!data.has("id")) {
+        if (!data.has("sub")) {
             throw new IllegalArgumentException("User data must contain identifier.");
         }
-        if (!data.has("first_name") || !data.has("last_name")) {
+        if (!data.has("given_name") || !data.has("family_name")) {
             throw new IllegalArgumentException("User data must contain given and family name.");
         }
 
@@ -1004,17 +1005,17 @@ public class ServerAuthorization extends Authorization
 
         // Common user data
         UserInformation userInformation = userData.getUserInformation();
-        userInformation.setUserId(data.get("id").asText());
-        userInformation.setFirstName(data.get("first_name").asText());
-        userInformation.setLastName(data.get("last_name").asText());
+        userInformation.setUserId(data.get("sub").asText());
+        userInformation.setFirstName(data.get("given_name").asText());
+        userInformation.setLastName(data.get("family_name").asText());
         if (data.has("organization")) {
             JsonNode organization = data.get("organization");
             if (!organization.isNull()) {
                 userInformation.setOrganization(organization.asText());
             }
         }
-        if (data.has("mail")) {
-            JsonNode email = data.get("mail");
+        if (data.has("email")) {
+            JsonNode email = data.get("email");
             if (!email.isNull()) {
                 userInformation.setEmail(email.asText());
             }

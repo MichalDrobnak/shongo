@@ -13,6 +13,8 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.postgresql.util.Base64;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.MatchResult;
@@ -293,6 +295,21 @@ public class ControllerConfiguration extends CombinedConfiguration
     public int getRpcPort()
     {
         return getInt(RPC_PORT);
+    }
+
+    /**
+     * @return XML-RPC url
+     */
+    public URL getRpcUrl() throws MalformedURLException {
+        int rpcPort;
+
+        try {
+            rpcPort = getRpcPort();
+        } catch (NoSuchElementException e) {
+            rpcPort = 8181;
+        }
+        String urlString = String.format("http://%s:%d", getRpcHost(false), rpcPort);
+        return new URL(urlString);
     }
 
     /**

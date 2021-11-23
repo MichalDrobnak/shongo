@@ -17,4 +17,18 @@
 <!--    <mvc:interceptors>-->
 <!--        <bean class="cz.cesnet.shongo.controller.domains.InterDomainControllerLogInterceptor" />-->
 <!--    </mvc:interceptors>-->
+
+    <bean id="controller" class="cz.cesnet.shongo.controller.Controller" factory-method="getInstance"/>
+
+    <bean id="configuration" factory-bean="controller" factory-method="getConfiguration"/>
+
+    <bean id="controllerClient" class="cz.cesnet.shongo.controller.ControllerClient">
+        <constructor-arg>
+            <bean factory-bean="configuration" factory-method="getRpcUrl"/>
+        </constructor-arg>
+    </bean>
+
+    <bean id="controllerReservationService" factory-bean="controllerClient" factory-method="getService">
+        <constructor-arg value="cz.cesnet.shongo.controller.api.rpc.ReservationService" type="java.lang.Class"/>
+    </bean>
 </beans>

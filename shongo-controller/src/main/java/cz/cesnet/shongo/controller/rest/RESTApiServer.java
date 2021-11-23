@@ -28,7 +28,6 @@ import java.util.EnumSet;
 public class RESTApiServer {
     private static final String SERVLET_PATH = "/";
     private static final String SERVLET_NAME = "rest-api";
-    private static final String FRONTEND_API_PATH = "/api/**";
     private static final String INTER_DOMAIN_API_PATH = "/domain/**";
 
     public static Server start(ControllerConfiguration configuration) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException {
