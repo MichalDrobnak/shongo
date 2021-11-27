@@ -117,7 +117,7 @@ public class RESTApiServer {
             serverConnector.setHost(host);
         }
         serverConnector.setPort(configuration.getRESTApiPort());
-//        httpsConnector.setIdleTimeout(configuration.getInterDomainCommandTimeout());
+//        serverConnector.setIdleTimeout(configuration.getInterDomainCommandTimeout());
 
         return serverConnector;
     }
